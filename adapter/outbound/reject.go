@@ -34,7 +34,10 @@ func (r *Reject) ListenPacketContext(ctx context.Context, metadata *C.Metadata) 
 	if err := r.ResolveUDP(ctx, metadata); err != nil {
 		return nil, err
 	}
-	return newPacketConn(&nopPacketConn{}, r), nil
+	if r.drop {
+		return newPacketConn(dropPacketConn{}, r), nil
+	}
+	return newPacketConn(nopPacketConn{}, r), C.ErrResetByRule
 }
 
 func (r *Reject) ResolveUDP(ctx context.Context, metadata *C.Metadata) error {
@@ -90,12 +93,10 @@ func NewPass() *Reject {
 
 type nopConn struct{}
 
-func (rw nopConn) Read(b []byte) (int, error) { return 0, io.EOF }
-
-func (rw nopConn) ReadBuffer(buffer *buf.Buffer) error { return io.EOF }
-
-func (rw nopConn) Write(b []byte) (int, error)          { return 0, io.EOF }
-func (rw nopConn) WriteBuffer(buffer *buf.Buffer) error { return io.EOF }
+func (rw nopConn) Read(b []byte) (int, error)           { return 0, C.ErrResetByRule }
+func (rw nopConn) ReadBuffer(buffer *buf.Buffer) error  { return C.ErrResetByRule }
+func (rw nopConn) Write(b []byte) (int, error)          { return 0, C.ErrResetByRule }
+func (rw nopConn) WriteBuffer(buffer *buf.Buffer) error { return C.ErrResetByRule }
 func (rw nopConn) Close() error                         { return nil }
 func (rw nopConn) LocalAddr() net.Addr                  { return nil }
 func (rw nopConn) RemoteAddr() net.Addr                 { return nil }
@@ -110,11 +111,9 @@ type nopPacketConn struct{}
 func (npc nopPacketConn) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 	return len(b), nil
 }
-func (npc nopPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
-	return 0, nil, io.EOF
-}
+func (npc nopPacketConn) ReadFrom(b []byte) (int, net.Addr, error) { return 0, nil, C.ErrResetByRule }
 func (npc nopPacketConn) WaitReadFrom() ([]byte, func(), net.Addr, error) {
-	return nil, nil, nil, io.EOF
+	return nil, nil, nil, C.ErrResetByRule
 }
 func (npc nopPacketConn) Close() error                     { return nil }
 func (npc nopPacketConn) LocalAddr() net.Addr              { return udpAddrIPv4Unspecified }
@@ -137,3 +136,18 @@ func (rw dropConn) RemoteAddr() net.Addr                 { return nil }
 func (rw dropConn) SetDeadline(time.Time) error          { return nil }
 func (rw dropConn) SetReadDeadline(time.Time) error      { return nil }
 func (rw dropConn) SetWriteDeadline(time.Time) error     { return nil }
+
+type dropPacketConn struct{}
+
+func (npc dropPacketConn) WriteTo(b []byte, addr net.Addr) (n int, err error) {
+	return len(b), nil
+}
+func (npc dropPacketConn) ReadFrom(b []byte) (int, net.Addr, error) { return 0, nil, io.EOF }
+func (npc dropPacketConn) WaitReadFrom() ([]byte, func(), net.Addr, error) {
+	return nil, nil, nil, io.EOF
+}
+func (npc dropPacketConn) Close() error                     { return nil }
+func (npc dropPacketConn) LocalAddr() net.Addr              { return udpAddrIPv4Unspecified }
+func (npc dropPacketConn) SetDeadline(time.Time) error      { return nil }
+func (npc dropPacketConn) SetReadDeadline(time.Time) error  { return nil }
+func (npc dropPacketConn) SetWriteDeadline(time.Time) error { return nil }

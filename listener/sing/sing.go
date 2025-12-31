@@ -296,8 +296,19 @@ func (c *packet) LocalAddr() net.Addr {
 
 func (c *packet) Drop() {
 	c.buff.Release()
+	// always try to report success to ensure that the memory is freed up
+	if handshake, isHandshake := common.Cast[network.HandshakeSuccess](c); isHandshake {
+		_ = handshake.HandshakeSuccess()
+	}
 }
 
 func (c *packet) InAddr() net.Addr {
 	return c.lAddr
+}
+
+func (c *packet) Upstream() any {
+	if c.writer == nil {
+		return nil
+	}
+	return *c.writer
 }

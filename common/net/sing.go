@@ -33,6 +33,9 @@ type WriterWithUpstream = network.WriterWithUpstream
 type WithUpstreamWriter = network.WithUpstreamWriter
 type WithUpstream = common.WithUpstream
 
+type HandshakeSuccess = network.HandshakeSuccess
+type HandshakeFailure = network.HandshakeFailure
+
 var UnwrapReader = network.UnwrapReader
 var UnwrapWriter = network.UnwrapWriter
 

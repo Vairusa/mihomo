@@ -274,6 +274,10 @@ func (s *packetAdapter) Key() string {
 	return s.key
 }
 
+func (s *packetAdapter) Upstream() any {
+	return s.UDPPacket
+}
+
 func NewPacketAdapter(packet UDPPacket, metadata *Metadata) PacketAdapter {
 	return &packetAdapter{
 		packet,

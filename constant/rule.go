@@ -1,5 +1,11 @@
 package constant
 
+import (
+	"io"
+
+	"github.com/metacubex/sing/common/exceptions"
+)
+
 // Rule Type
 const (
 	Domain RuleType = iota
@@ -129,3 +135,7 @@ type RuleGroup interface {
 	Rule
 	GetRecodeSize() int
 }
+
+var (
+	ErrResetByRule = exceptions.Cause(io.EOF, "reset by rule") // TODO: replace function from sing
+)

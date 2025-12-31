@@ -463,9 +463,17 @@ func handleUDPConn(packet C.PacketAdapter) {
 			rawPc, err := retry(ctx, func(ctx context.Context) (C.PacketConn, error) {
 				return proxy.ListenPacketContext(ctx, dialMetadata)
 			}, func(err error) {
-				logMetadataErr(metadata, rule, proxy, err)
+				if !errors.Is(err, C.ErrResetByRule) {
+					logMetadataErr(metadata, rule, proxy, err)
+				}
 			})
 			if err != nil {
+				if errors.Is(err, C.ErrResetByRule) {
+					logMetadata(metadata, rule, rawPc)
+					if handshake, isHandshake := utils.Cast[N.HandshakeFailure](packet); isHandshake {
+						_ = handshake.HandshakeFailure(err)
+					}
+				}
 				return nil, nil, err
 			}
 			logMetadata(metadata, rule, rawPc)
@@ -490,7 +498,7 @@ func handleUDPConn(packet C.PacketAdapter) {
 			sender.Process(pc, proxy)
 		}()
 	}
-	sender.Send(packet) // nonblocking
+	sender.Send(packet) // will not block
 }
 
 func handleTCPConn(connCtx C.ConnContext) {
@@ -698,6 +706,9 @@ func shouldStopRetry(err error) bool {
 		return true
 	}
 	if errors.Is(err, resolver.ErrIPv6Disabled) {
+		return true
+	}
+	if errors.Is(err, C.ErrResetByRule) {
 		return true
 	}
 	if errors.Is(err, loopback.ErrReject) {
