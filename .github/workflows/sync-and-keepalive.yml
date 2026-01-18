@@ -1,0 +1,41 @@
+name: Sync All Branches and Keepalive
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-process:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync Logic
+        run: |
+          # 1. Tambahkan remote dan bersihkan referensi lokal yang sudah mati
+          git remote add upstream https://github.com/MetaCubeX/mihomo.git
+          git fetch upstream --prune
+
+          # 2. Loop semua branch dari upstream
+          for branch in $(git branch -r | grep 'upstream/' | grep -v 'HEAD' | sed 's/upstream\///'); do
+            echo "Processing branch: $branch"
+            
+            # Reset branch lokal agar identik dengan upstream
+            git checkout -B $branch upstream/$branch
+            
+            # Push ke fork Anda (origin)
+            git push origin $branch
+          done
+
+      - name: Keepalive
+        uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          use_api: true
+          
