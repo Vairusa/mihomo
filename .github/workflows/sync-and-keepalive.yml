@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Fork
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          token: ${{ secrets.MY_TOKEN }}
 
       - name: Sync Logic
         run: |
